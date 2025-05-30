@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polygon Ball Games</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+        }
+
+        .container {
+            text-align: center;
+            background: white;
+            border: 2px solid #000;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 90%;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #000;
+            font-weight: bold;
+        }
+
+        .developer {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 40px;
+        }
+
+        .games-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .game-link {
+            display: block;
+            text-decoration: none;
+            background: #000;
+            color: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            border: 2px solid #000;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .game-link:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            background: #333;
+        }
+
+        .game-link:active {
+            transform: translateY(-2px);
+        }
+
+        .game-2d {
+            background: #000;
+        }
+
+        .game-2d:hover {
+            background: #333;
+        }
+
+        .game-3d {
+            background: white;
+            color: #000;
+            border: 2px solid #000;
+        }
+
+        .game-3d:hover {
+            background: #f0f0f0;
+        }
+
+        .description {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .game-link {
+                font-size: 1.1rem;
+                padding: 18px 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Polygon Ball Games</h1>
+        <div class="developer">by Suryansh Varma</div>
+        
+        <div class="games-container">
+            <a href="./bouncingball.html" class="game-link game-2d" onclick="alert('2D Ball Polygon Game - Link not configured yet!')">
+                2D Ball Polygon Game
+                <div class="description">Classic 2D polygon ball adventure</div>
+            </a>
+            
+            <a href="./bouncingball3d.html" class="game-link game-3d" onclick="alert('3D Ball Polygon Game - Link not configured yet!')">
+                3D Ball Polygon Game
+                <div class="description">Immersive 3D polygon ball experience</div>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

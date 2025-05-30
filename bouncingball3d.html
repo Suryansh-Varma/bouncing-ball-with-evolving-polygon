@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Polygon Bounce Simulation</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        #container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 0 5px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        #startBtn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+        }
+        #startBtn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+        
+        #stopBtn {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+            display: none;
+        }
+        #stopBtn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(244, 67, 54, 0.4);
+        }
+        
+        #restartBtn {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+        }
+        #restartBtn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4);
+        }
+        
+        .info {
+            font-size: 24px;
+            margin: 10px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+        
+        #oopsMessage {
+            font-size: 32px;
+            color: #ff6b6b;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+            display: none;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            animation: bounce 1s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        
+        .button-container {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        h1 {
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .control-info {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 3D Polygon Bounce Simulation</h1>
+    <div class="info">Current Shape: <span id="polygonName">Square Prism</span></div>
+    <div class="info">Sides: <span id="sideCount">4</span></div>
+    <div id="oopsMessage">Oops! The ball has escaped! 🚀</div>
+    
+    <div id="container">
+        <div id="scene-container"></div>
+    </div>
+    
+    <div class="button-container">
+        <button id="startBtn">▶️ Start Simulation</button>
+        <button id="stopBtn">⏸️ Stop Simulation</button>
+        <button id="restartBtn">🔄 Restart Simulation</button>
+    </div>
+    
+    <div class="controls">
+        <div class="control-info">
+            🖱️ Drag to rotate • 🔍 Scroll to zoom • Ball bounces to add more sides!
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Scene setup
+        let scene, camera, renderer, controls;
+        let ball, polygonMesh, wireframeMesh;
+        let ballRadius = 0.3;
+        let ballPosition = new THREE.Vector3(0, 0, 0);
+        let ballVelocity = new THREE.Vector3(0.05, 0.04, 0.03);
+        let sides = 4;
+        let polygonRadius = 4;
+        let prismHeight = 6;
+        let animationId;
+        let gameActive = false;
+        let gameRunning = false;
+        let escapeTimer = 0;
+        const escapeInterval = 600;
+        
+        // UI elements
+        const sideCountDisplay = document.getElementById('sideCount');
+        const polygonNameDisplay = document.getElementById('polygonName');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const oopsMessage = document.getElementById('oopsMessage');
+        
+        // Speech synthesis
+        const synth = window.speechSynthesis;
+        
+        // Polygon names
+        const polygonNames = [
+            "", "", "", "Triangle Prism", "Square Prism",
+            "Pentagon Prism", "Hexagon Prism", "Heptagon Prism", "Octagon Prism", 
+            "Nonagon Prism", "Decagon Prism", "Hendecagon Prism", "Dodecagon Prism",
+            "Tridecagon Prism", "Tetradecagon Prism", "Pentadecagon Prism",
+            "Hexadecagon Prism", "Heptadecagon Prism", "Octadecagon Prism", 
+            "Enneadecagon Prism", "Icosagon Prism"
+        ];
+        
+        // Escape messages
+        const escapeMessages = [
+            "Whoops! The ball escaped to another dimension! 🌌",
+            "Ball: I choose freedom! 🕊️",
+            "The ball has left the 3D building! 🏢",
+            "Ball.exe has achieved enlightenment 🧘‍♂️",
+            "The ball decided to explore the multiverse! 🌠",
+            "Ball: This prism is too mainstream for me! 😎",
+            "The ball went to find bigger polygons! 📐",
+            "Ball has transcended geometry! ✨",
+            "The ball is now in the 4th dimension! 🌀",
+            "Ball: Peace out, I'm going quantum! ⚛️"
+        ];
+        
+        function initThreeJS() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, 800/600, 0.1, 1000);
+            camera.position.set(8, 6, 8);
+            camera.lookAt(0, 0, 0);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(800, 600);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.setClearColor(0x000000, 0);
+            
+            document.getElementById('scene-container').appendChild(renderer.domElement);
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+            
+            const pointLight = new THREE.PointLight(0x4fc3f7, 0.5);
+            pointLight.position.set(-5, 5, -5);
+            scene.add(pointLight);
+            
+            // Simple mouse controls
+            setupMouseControls();
+        }
+        
+        function setupMouseControls() {
+            let mouseDown = false;
+            let mouseX = 0;
+            let mouseY = 0;
+            let targetRotationX = 0;
+            let targetRotationY = 0;
+            let currentRotationX = 0;
+            let currentRotationY = 0;
+            
+            renderer.domElement.addEventListener('mousedown', (event) => {
+                mouseDown = true;
+                mouseX = event.clientX;
+                mouseY = event.clientY;
+            });
+            
+            renderer.domElement.addEventListener('mousemove', (event) => {
+                if (mouseDown) {
+                    const deltaX = event.clientX - mouseX;
+                    const deltaY = event.clientY - mouseY;
+                    
+                    targetRotationY += deltaX * 0.01;
+                    targetRotationX += deltaY * 0.01;
+                    targetRotationX = Math.max(-Math.PI/2, Math.min(Math.PI/2, targetRotationX));
+                    
+                    mouseX = event.clientX;
+                    mouseY = event.clientY;
+                }
+            });
+            
+            renderer.domElement.addEventListener('mouseup', () => {
+                mouseDown = false;
+            });
+            
+            renderer.domElement.addEventListener('wheel', (event) => {
+                camera.position.multiplyScalar(event.deltaY > 0 ? 1.1 : 0.9);
+                camera.position.setLength(Math.max(3, Math.min(20, camera.position.length())));
+            });
+            
+            function updateCamera() {
+                currentRotationX += (targetRotationX - currentRotationX) * 0.1;
+                currentRotationY += (targetRotationY - currentRotationY) * 0.1;
+                
+                const radius = camera.position.length();
+                camera.position.x = radius * Math.cos(currentRotationX) * Math.sin(currentRotationY);
+                camera.position.y = radius * Math.sin(currentRotationX);
+                camera.position.z = radius * Math.cos(currentRotationX) * Math.cos(currentRotationY);
+                camera.lookAt(0, 0, 0);
+                
+                requestAnimationFrame(updateCamera);
+            }
+            updateCamera();
+        }
+        
+        function createPolygonPrism(sides, radius, height) {
+            // Create polygon shape
+            const shape = new THREE.Shape();
+            const vertices = [];
+            
+            for (let i = 0; i < sides; i++) {
+                const angle = (i * 2 * Math.PI / sides);
+                const x = radius * Math.cos(angle);
+                const z = radius * Math.sin(angle);
+                vertices.push(new THREE.Vector2(x, z));
+                
+                if (i === 0) {
+                    shape.moveTo(x, z);
+                } else {
+                    shape.lineTo(x, z);
+                }
+            }
+            shape.lineTo(vertices[0].x, vertices[0].y);
+            
+            // Extrude geometry
+            const extrudeSettings = {
+                depth: height,
+                bevelEnabled: false
+            };
+            
+            const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+            geometry.translate(0, -height/2, 0);
+            
+            // Materials
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0x4fc3f7,
+                transparent: true,
+                opacity: 0.3,
+                side: THREE.DoubleSide
+            });
+            
+            const wireframeMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x00bcd4,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            // Remove old polygon if exists
+            if (polygonMesh) {
+                scene.remove(polygonMesh);
+                scene.remove(wireframeMesh);
+            }
+            
+            polygonMesh = new THREE.Mesh(geometry, material);
+            wireframeMesh = new THREE.Mesh(geometry, wireframeMaterial);
+            
+            scene.add(polygonMesh);
+            scene.add(wireframeMesh);
+            
+            return { vertices, height };
+        }
+        
+        function createBall() {
+            const geometry = new THREE.SphereGeometry(ballRadius, 32, 32);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0xff4757,
+                shininess: 100
+            });
+            
+            if (ball) {
+                scene.remove(ball);
+            }
+            
+            ball = new THREE.Mesh(geometry, material);
+            ball.castShadow = true;
+            scene.add(ball);
+        }
+        
+        function isPointInPolygon(x, z, vertices) {
+            let inside = false;
+            for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+                const xi = vertices[i].x, zi = vertices[i].y;
+                const xj = vertices[j].x, zj = vertices[j].y;
+                
+                if (((zi > z) !== (zj > z)) && (x < (xj - xi) * (z - zi) / (zj - zi) + xi)) {
+                    inside = !inside;
+                }
+            }
+            return inside;
+        }
+        
+        function checkBoundaryCollisions() {
+            if (!gameActive || !gameRunning) return;
+            
+            const { vertices } = createPolygonPrism(sides, polygonRadius, prismHeight);
+            
+            // Check if ball is outside polygon or height bounds
+            const outsidePolygon = !isPointInPolygon(ballPosition.x, ballPosition.z, vertices);
+            const outsideHeight = ballPosition.y < -prismHeight/2 || ballPosition.y > prismHeight/2;
+            
+            if (outsidePolygon || outsideHeight) {
+                gameActive = false;
+                gameRunning = false;
+                oopsMessage.textContent = escapeMessages[Math.floor(Math.random() * escapeMessages.length)];
+                oopsMessage.style.display = 'block';
+                speakFunnyMessage();
+                updateButtonStates();
+                return;
+            }
+            
+            // Wall collision detection
+            let collided = false;
+            for (let i = 0; i < vertices.length && !collided; i++) {
+                const p1 = vertices[i];
+                const p2 = vertices[(i + 1) % vertices.length];
+                
+                // Distance to line segment
+                const A = ballPosition.x - p1.x;
+                const B = ballPosition.z - p1.y;
+                const C = p2.x - p1.x;
+                const D = p2.y - p1.y;
+                
+                const dot = A * C + B * D;
+                const lenSq = C * C + D * D;
+                let param = -1;
+                if (lenSq !== 0) param = dot / lenSq;
+                
+                let xx, yy;
+                if (param < 0) {
+                    xx = p1.x;
+                    yy = p1.y;
+                } else if (param > 1) {
+                    xx = p2.x;
+                    yy = p2.y;
+                } else {
+                    xx = p1.x + param * C;
+                    yy = p1.y + param * D;
+                }
+                
+                const dx = ballPosition.x - xx;
+                const dz = ballPosition.z - yy;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                
+                if (distance < ballRadius) {
+                    // Collision with wall
+                    const normal = new THREE.Vector3(dx / distance, 0, dz / distance);
+                    ballVelocity.reflect(normal);
+                    
+                    // Move ball out of wall
+                    const overlap = ballRadius - distance;
+                    ballPosition.x += normal.x * overlap * 1.1;
+                    ballPosition.z += normal.z * overlap * 1.1;
+                    
+                    // Increase sides
+                    sides++;
+                    updatePolygon();
+                    collided = true;
+                }
+            }
+            
+            // Floor and ceiling collision
+            if (ballPosition.y - ballRadius <= -prismHeight/2) {
+                ballVelocity.y = Math.abs(ballVelocity.y);
+                ballPosition.y = -prismHeight/2 + ballRadius;
+            }
+            if (ballPosition.y + ballRadius >= prismHeight/2) {
+                ballVelocity.y = -Math.abs(ballVelocity.y);
+                ballPosition.y = prismHeight/2 - ballRadius;
+            }
+        }
+        
+        function updatePolygon() {
+            createPolygonPrism(sides, polygonRadius, prismHeight);
+            sideCountDisplay.textContent = sides;
+            const name = sides <= 20 ? polygonNames[sides] : sides + "-sided Prism";
+            polygonNameDisplay.textContent = name;
+            speakPolygonName();
+        }
+        
+        function speakPolygonName() {
+            if (synth.speaking) synth.cancel();
+            const name = sides <= 20 ? polygonNames[sides] : sides + "-sided Prism";
+            const utterance = new SpeechSynthesisUtterance(name);
+            utterance.rate = 0.9;
+            synth.speak(utterance);
+        }
+        
+        function speakFunnyMessage() {
+            if (synth.speaking) synth.cancel();
+            const messages = [
+                "Oops! The ball escaped to another dimension!",
+                "Oh no! The ball broke free from 3D space!",
+                "The ball has transcended geometry!",
+                "Bye bye ball! See you in the 4th dimension!",
+                "The ball chose freedom over physics!"
+            ];
+            const message = messages[Math.floor(Math.random() * messages.length)];
+            const utterance = new SpeechSynthesisUtterance(message);
+            utterance.rate = 1.1;
+            utterance.pitch = 1.3;
+            synth.speak(utterance);
+        }
+        
+        function init() {
+            sides = 4;
+            ballPosition.set(0, 0, 0);
+            ballVelocity.set(
+                0.05 + Math.random() * 0.03,
+                0.04 + Math.random() * 0.03,
+                0.03 + Math.random() * 0.03
+            );
+            gameActive = true;
+            gameRunning = true;
+            oopsMessage.style.display = 'none';
+            escapeTimer = 0;
+            
+            createBall();
+            updatePolygon();
+            speakPolygonName();
+        }
+        
+        function resumeSimulation() {
+            gameActive = true;
+            gameRunning = true;
+            oopsMessage.style.display = 'none';
+            updateButtonStates();
+            animate();
+        }
+        
+        function updateButtonStates() {
+            if (!gameRunning && gameActive) {
+                startBtn.style.display = 'inline-block';
+                stopBtn.style.display = 'none';
+                restartBtn.style.display = 'inline-block';
+                startBtn.disabled = false;
+                restartBtn.disabled = false;
+            } else if (!gameRunning && !gameActive) {
+                startBtn.style.display = 'inline-block';
+                stopBtn.style.display = 'none';
+                restartBtn.style.display = 'inline-block';
+                startBtn.disabled = false;
+                restartBtn.disabled = gameActive;
+            } else if (gameActive && gameRunning) {
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-block';
+                restartBtn.style.display = 'inline-block';
+                stopBtn.disabled = false;
+                restartBtn.disabled = false;
+            }
+        }
+        
+        function animate() {
+            if (!gameRunning || !gameActive) return;
+            
+            // Update ball physics
+            ballPosition.add(ballVelocity);
+            ball.position.copy(ballPosition);
+            
+            // Add some randomness for escape
+            escapeTimer++;
+            if (escapeTimer > escapeInterval && Math.random() < 0.003) {
+                ballVelocity.multiplyScalar(3);
+            }
+            
+            checkBoundaryCollisions();
+            
+            renderer.render(scene, camera);
+            
+            if (gameRunning && gameActive) {
+                animationId = requestAnimationFrame(animate);
+            }
+        }
+        
+        function startSimulation() {
+            if (animationId) cancelAnimationFrame(animationId);
+            
+            if (gameActive) {
+                resumeSimulation();
+            } else {
+                init();
+                updateButtonStates();
+                animate();
+            }
+        }
+        
+        function stopSimulation() {
+            gameRunning = false;
+            if (animationId) cancelAnimationFrame(animationId);
+            updateButtonStates();
+        }
+        
+        function resetSimulation() {
+            if (animationId) cancelAnimationFrame(animationId);
+            init();
+            updateButtonStates();
+            animate();
+        }
+        
+        startBtn.addEventListener('click', startSimulation);
+        stopBtn.addEventListener('click', stopSimulation);
+        restartBtn.addEventListener('click', resetSimulation);
+        
+        // Initialize
+        initThreeJS();
+        sides = 4;
+        gameRunning = false;
+        gameActive = false;
+        createBall();
+        createPolygonPrism(sides, polygonRadius, prismHeight);
+        sideCountDisplay.textContent = sides;
+        polygonNameDisplay.textContent = polygonNames[sides];
+        updateButtonStates();
+        
+        // Start render loop for camera controls
+        function renderLoop() {
+            if (!gameRunning) {
+                renderer.render(scene, camera);
+            }
+            requestAnimationFrame(renderLoop);
+        }
+        renderLoop();
+    </script>
+</body>
+</html>

@@ -13,7 +13,7 @@ A fun, interactive web-based simulation where a ball bounces inside a growing re
 
 ## How to Use 
 
-1. Simply open `bouncingball.html` in any modern web browser
+1. Simply open `index.html` in any modern web browser
 2. Click start button to start the game.
 3. Watch the ball bounce and the polygon grow!
 4. You can also stop at current

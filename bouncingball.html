@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Polygon Bounce Simulation</title>
+    <title>2D Polygon Bounce Simulation</title>
     <style>
         body {
             font-family: 'Comic Sans MS', cursive, sans-serif;
@@ -102,7 +102,6 @@
             "Hexadecagon", "Heptadecagon", "Octadecagon", "Enneadecagon", "Icosagon"
         ];
         
-        // Simulation parameters
         let sides = 4;
         let radius = 200;
         let centerX = canvas.width / 2;
@@ -120,7 +119,6 @@
         let escapeTimer = 0;
         const escapeInterval = 300;
         
-        // Funny escape messages
         const escapeMessages = [
             "Whoops! The ball escaped! 😅",
             "Ball: I'm outta here! 🏃‍♂️",
@@ -135,7 +133,7 @@
         ];
         
         function init() {
-            sides = 4;
+            sides = 3;
             lastEdgeHit = -1;
             ballX = centerX;
             ballY = centerY - 100;
@@ -149,6 +147,14 @@
             escapeTimer = 0;
             speakPolygonName();
             draw();
+        }
+        
+        function resumeSimulation() {
+            gameActive = true;
+            gameRunning = true;
+            oopsMessage.style.display = 'none';
+            updateButtonStates();
+            update();
         }
         
         function updateVertices() {
@@ -194,22 +200,29 @@
         }
         
         function updateButtonStates() {
-            if (!gameRunning) {
-                // Initial state or stopped manually
+            if (!gameRunning && gameActive) {
+               
                 startBtn.style.display = 'inline-block';
                 stopBtn.style.display = 'none';
                 restartBtn.style.display = 'inline-block';
                 startBtn.disabled = false;
-                restartBtn.disabled = true;
+                restartBtn.disabled = false;
+            } else if (!gameRunning && !gameActive) {
+               
+                startBtn.style.display = 'inline-block';
+                stopBtn.style.display = 'none';
+                restartBtn.style.display = 'inline-block';
+                startBtn.disabled = false;
+                restartBtn.disabled = gameActive; 
             } else if (gameActive && gameRunning) {
-                // Game is running
+                
                 startBtn.style.display = 'none';
                 stopBtn.style.display = 'inline-block';
                 restartBtn.style.display = 'inline-block';
                 stopBtn.disabled = false;
                 restartBtn.disabled = false;
             } else if (!gameActive && gameRunning) {
-                // Ball has escaped
+        
                 startBtn.style.display = 'none';
                 stopBtn.style.display = 'none';
                 restartBtn.style.display = 'inline-block';
@@ -245,9 +258,6 @@
             ctx.fillStyle = '#333';
             const name = sides <= 20 ? polygonNames[sides] : sides + "-sided Polygon";
             ctx.fillText(name, centerX, centerY);
-            
-            ctx.font = '18px Comic Sans MS';
-            ctx.fillText(`Sides: ${sides}`, centerX, centerY + 30);
         }
 
         function isPointInPolygon(x, y) {
@@ -274,6 +284,7 @@
             
             if (!isPointInPolygon(ballX, ballY)) {
                 gameActive = false;
+                gameRunning = false;
                 oopsMessage.textContent = escapeMessages[Math.floor(Math.random() * escapeMessages.length)];
                 oopsMessage.style.display = 'block';
                 speakFunnyMessage();
@@ -353,23 +364,32 @@
             }
         }
         
+        function stopSimulation() {
+            gameRunning = false;
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            updateButtonStates();
+            
+            draw();
+        }
+        
         function startSimulation() {
             if (animationId) {
                 cancelAnimationFrame(animationId);
             }
-            init();
-            updateButtonStates();
-            update();
-        }
-        
-        function stopSimulation() {
-            gameRunning = false;
-            gameActive = false;
-            if (animationId) {
-                cancelAnimationFrame(animationId);
+            
+           
+            if (gameActive) {
+                
+                resumeSimulation();
+            } else {
+              
+                init();
+                updateButtonStates();
+                update();
             }
-            updateButtonStates();
-            draw();
         }
         
         function resetSimulation() {
@@ -385,8 +405,8 @@
         stopBtn.addEventListener('click', stopSimulation);
         restartBtn.addEventListener('click', resetSimulation);
         
-        // Initialize without starting
-        sides = 4;
+
+        sides = 3;
         gameRunning = false;
         gameActive = false;
         updateVertices();
