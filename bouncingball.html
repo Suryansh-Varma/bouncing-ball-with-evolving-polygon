@@ -23,14 +23,33 @@
         button {
             padding: 10px 20px;
             font-size: 16px;
-            background-color: #4CAF50;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             margin-bottom: 20px;
         }
-        button:hover {
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        #startBtn {
+            background-color: #3498db;
+        }
+        #startBtn:hover:not(:disabled) {
+            background-color: #2980b9;
+        }
+        #stopBtn {
+            background-color: #e74c3c;
+            display: none;
+        }
+        #stopBtn:hover:not(:disabled) {
+            background-color: #c0392b;
+        }
+        #restartBtn {
+            background-color: #4CAF50;
+        }
+        #restartBtn:hover:not(:disabled) {
             background-color: #45a049;
         }
         .info {
@@ -45,20 +64,30 @@
             text-align: center;
             display: none;
         }
+        .button-container {
+            display: flex;
+            gap: 10px;
+        }
     </style>
 </head>
 <body>
     <h1>Polygon Bounce Simulation</h1>
-    <div class="info">Sides: <span id="sideCount">5</span></div>
+    <div class="info">Sides: <span id="sideCount">4</span></div>
     <div id="oopsMessage">Oops! The ball has left the play! 🤪</div>
     <canvas id="canvas" width="600" height="600"></canvas>
-    <button id="restartBtn">Restart Simulation</button>
+    <div class="button-container">
+        <button id="startBtn">Start Simulation</button>
+        <button id="stopBtn">Stop Simulation</button>
+        <button id="restartBtn">Restart Simulation</button>
+    </div>
 
     <script>
         // Canvas setup
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const sideCountDisplay = document.getElementById('sideCount');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
         const restartBtn = document.getElementById('restartBtn');
         const oopsMessage = document.getElementById('oopsMessage');
         
@@ -67,14 +96,14 @@
         
         // Polygon names
         const polygonNames = [
-            "", "", "", "", "",
+            "", "", "", "Triangle", "Square",
             "Pentagon", "Hexagon", "Heptagon", "Octagon", "Nonagon", "Decagon",
             "Hendecagon", "Dodecagon", "Tridecagon", "Tetradecagon", "Pentadecagon",
             "Hexadecagon", "Heptadecagon", "Octadecagon", "Enneadecagon", "Icosagon"
         ];
         
         // Simulation parameters
-        let sides = 5;
+        let sides = 4;
         let radius = 200;
         let centerX = canvas.width / 2;
         let centerY = canvas.height / 2;
@@ -86,9 +115,10 @@
         let vertices = [];
         let lastEdgeHit = -1;
         let animationId;
-        let gameActive = true;
+        let gameActive = false;
+        let gameRunning = false;
         let escapeTimer = 0;
-        const escapeInterval = 300; // frames before possible escape
+        const escapeInterval = 300;
         
         // Funny escape messages
         const escapeMessages = [
@@ -104,9 +134,8 @@
             "Ball: I need some me time 🧘‍♂️"
         ];
         
-        // Initialize the simulation
         function init() {
-            sides = 5;
+            sides = 4;
             lastEdgeHit = -1;
             ballX = centerX;
             ballY = centerY - 100;
@@ -115,13 +144,13 @@
             updateVertices();
             sideCountDisplay.textContent = sides;
             gameActive = true;
+            gameRunning = true;
             oopsMessage.style.display = 'none';
             escapeTimer = 0;
             speakPolygonName();
             draw();
         }
         
-        // Update polygon vertices
         function updateVertices() {
             vertices = [];
             for (let i = 0; i < sides; i++) {
@@ -132,22 +161,18 @@
             }
         }
         
-        // Speak the polygon name
         function speakPolygonName() {
             if (synth.speaking) {
                 synth.cancel();
             }
             
-            const name = sides < 5 ? "Polygon" : 
-                        sides <= 20 ? polygonNames[sides] : 
-                        sides + "-sided Polygon";
+            const name = sides <= 20 ? polygonNames[sides] : sides + "-sided Polygon";
             
             const utterance = new SpeechSynthesisUtterance(name);
             utterance.rate = 0.9;
             synth.speak(utterance);
         }
         
-        // Speak funny message
         function speakFunnyMessage() {
             if (synth.speaking) {
                 synth.cancel();
@@ -168,12 +193,33 @@
             synth.speak(utterance);
         }
         
-        // Draw the scene
+        function updateButtonStates() {
+            if (!gameRunning) {
+                // Initial state or stopped manually
+                startBtn.style.display = 'inline-block';
+                stopBtn.style.display = 'none';
+                restartBtn.style.display = 'inline-block';
+                startBtn.disabled = false;
+                restartBtn.disabled = true;
+            } else if (gameActive && gameRunning) {
+                // Game is running
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-block';
+                restartBtn.style.display = 'inline-block';
+                stopBtn.disabled = false;
+                restartBtn.disabled = false;
+            } else if (!gameActive && gameRunning) {
+                // Ball has escaped
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'none';
+                restartBtn.style.display = 'inline-block';
+                restartBtn.disabled = false;
+            }
+        }
+        
         function draw() {
-            // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw polygon
+
             ctx.beginPath();
             ctx.moveTo(vertices[0].x, vertices[0].y);
             for (let i = 1; i < vertices.length; i++) {
@@ -185,7 +231,6 @@
             ctx.stroke();
             
             if (gameActive) {
-                // Draw ball
                 ctx.beginPath();
                 ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
                 ctx.fillStyle = '#e74c3c';
@@ -195,21 +240,16 @@
                 ctx.stroke();
             }
             
-            // Draw polygon name
             ctx.font = '24px Comic Sans MS';
             ctx.textAlign = 'center';
             ctx.fillStyle = '#333';
-            const name = sides < 5 ? "Polygon" : 
-                          sides <= 20 ? polygonNames[sides] : 
-                          sides + "-sided Polygon";
+            const name = sides <= 20 ? polygonNames[sides] : sides + "-sided Polygon";
             ctx.fillText(name, centerX, centerY);
             
-            // Draw side count
             ctx.font = '18px Comic Sans MS';
             ctx.fillText(`Sides: ${sides}`, centerX, centerY + 30);
         }
-        
-        // Check if ball is inside polygon
+
         function isPointInPolygon(x, y) {
             let inside = false;
             for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
@@ -223,22 +263,21 @@
             return inside;
         }
         
-        // Check collision with edges
         function checkCollisions() {
-            // Random chance to escape (after some time)
+            if (!gameActive || !gameRunning) return;
+
             escapeTimer++;
             if (escapeTimer > escapeInterval && Math.random() < 0.005) {
-                // Make the ball escape dramatically
                 ballSpeedX *= 5;
                 ballSpeedY *= 5;
             }
             
-            // Check if ball has escaped
             if (!isPointInPolygon(ballX, ballY)) {
                 gameActive = false;
                 oopsMessage.textContent = escapeMessages[Math.floor(Math.random() * escapeMessages.length)];
                 oopsMessage.style.display = 'block';
                 speakFunnyMessage();
+                updateButtonStates();
                 cancelAnimationFrame(animationId);
                 return;
             }
@@ -247,21 +286,17 @@
                 const p1 = vertices[i];
                 const p2 = vertices[(i + 1) % vertices.length];
                 
-                // Vector from p1 to p2
                 const edgeX = p2.x - p1.x;
                 const edgeY = p2.y - p1.y;
                 
-                // Vector from p1 to ball
                 const ballToP1X = ballX - p1.x;
                 const ballToP1Y = ballY - p1.y;
-                
-                // Project ball position onto edge
+
                 const edgeLength = Math.sqrt(edgeX * edgeX + edgeY * edgeY);
                 const unitEdgeX = edgeX / edgeLength;
                 const unitEdgeY = edgeY / edgeLength;
                 const projectionLength = ballToP1X * unitEdgeX + ballToP1Y * unitEdgeY;
                 
-                // Closest point on edge to ball
                 let closestX, closestY;
                 if (projectionLength < 0) {
                     closestX = p1.x;
@@ -274,14 +309,11 @@
                     closestY = p1.y + projectionLength * unitEdgeY;
                 }
                 
-                // Distance from ball to closest point on edge
                 const distanceX = ballX - closestX;
                 const distanceY = ballY - closestY;
                 const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
                 
-                // Collision detected
                 if (distance < ballRadius) {
-                    // Only add a new side if this is a new edge hit
                     if (lastEdgeHit !== i) {
                         lastEdgeHit = i;
                         sides++;
@@ -290,7 +322,6 @@
                         speakPolygonName();
                     }
                     
-                    // Calculate reflection
                     const normalX = distanceX / distance;
                     const normalY = distanceY / distance;
                     
@@ -298,7 +329,6 @@
                     ballSpeedX = ballSpeedX - 2 * dotProduct * normalX;
                     ballSpeedY = ballSpeedY - 2 * dotProduct * normalY;
                     
-                    // Move ball outside collision range
                     const overlap = ballRadius - distance;
                     ballX += normalX * overlap * 1.1;
                     ballY += normalY * overlap * 1.1;
@@ -308,40 +338,60 @@
             }
         }
         
-        // Update simulation
         function update() {
-            if (!gameActive) return;
+            if (!gameActive || !gameRunning) return;
             
-            // Move ball
             ballX += ballSpeedX;
             ballY += ballSpeedY;
             
-            // Check collisions
             checkCollisions();
             
-            // Draw
             draw();
             
-            // Continue animation if game is still active
-            if (gameActive) {
+            if (gameActive && gameRunning) {
                 animationId = requestAnimationFrame(update);
             }
         }
         
-        // Start the simulation
         function startSimulation() {
             if (animationId) {
                 cancelAnimationFrame(animationId);
             }
             init();
+            updateButtonStates();
             update();
         }
         
-        // Event listeners
-        restartBtn.addEventListener('click', startSimulation);
+        function stopSimulation() {
+            gameRunning = false;
+            gameActive = false;
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            updateButtonStates();
+            draw();
+        }
         
-        // Start the simulation
-        startSimulation();
+        function resetSimulation() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            init();
+            updateButtonStates();
+            update();
+        }
+        
+        startBtn.addEventListener('click', startSimulation);
+        stopBtn.addEventListener('click', stopSimulation);
+        restartBtn.addEventListener('click', resetSimulation);
+        
+        // Initialize without starting
+        sides = 4;
+        gameRunning = false;
+        gameActive = false;
+        updateVertices();
+        draw();
+        updateButtonStates();
     </script>
 </body>
 </html>
