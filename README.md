@@ -2,7 +2,7 @@
 
 A fun, interactive web-based simulation where a ball bounces inside a growing regular polygon, with comedic "escape" events!
 
-## Features ✨
+## Features
 
 - **Growing Polygon**: Starts as a pentagon (4 sides) and gains a new side each time the ball hits any edge
 - **Polygon Names**: Displays correct names (Pentagon, Hexagon, etc.) in the center
@@ -11,9 +11,9 @@ A fun, interactive web-based simulation where a ball bounces inside a growing re
 - **Restart Button**: Reset the simulation at any time
 - **Playful Design**: Comic Sans font and humorous tone throughout
 
-## How to Use 🚀
+## How to Use 
 
-1. Simply open `page.html` in any modern web browser
+1. Simply open `bouncingball.html` in any modern web browser
 2. Watch the ball bounce and the polygon grow!
 3. When the ball escapes (it will eventually), you'll see a funny message
 4. Click "Restart Simulation" to start over
